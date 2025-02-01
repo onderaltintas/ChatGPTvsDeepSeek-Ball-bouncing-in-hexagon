@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bouncing Ball in Spinning Hexagon</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #f0f0f0;
+    }
+    canvas {
+      border: 1px solid #000;
+    }
+  </style>
+</head>
+<body>
+  <script>
+const canvas = document.createElement("canvas");
+const ctx = canvas.getContext("2d");
+document.body.appendChild(canvas);
+canvas.width = 800;
+canvas.height = 600;
+
+const gravity = 0.1;
+const friction = 0.99;
+
+let ball = {
+    x: 400,
+    y: 200,
+    radius: 20,
+    vx: 2,
+    vy: 0,
+};
+
+let hexagon = {
+    x: 400,
+    y: 300,
+    radius: 250,
+    angle: 0,
+    angularSpeed: 0.01,
+};
+
+function getHexagonVertices() {
+    let vertices = [];
+    for (let i = 0; i < 6; i++) {
+        let angle = hexagon.angle + (Math.PI / 3) * i;
+        vertices.push({
+            x: hexagon.x + hexagon.radius * Math.cos(angle),
+            y: hexagon.y + hexagon.radius * Math.sin(angle),
+        });
+    }
+    return vertices;
+}
+
+function reflectVelocity(normal) {
+    let dot = ball.vx * normal.x + ball.vy * normal.y;
+    ball.vx -= 2 * dot * normal.x;
+    ball.vy -= 2 * dot * normal.y;
+    ball.vx *= 0.8;
+    ball.vy *= 0.8;
+}
+
+function checkCollision() {
+    let vertices = getHexagonVertices();
+    for (let i = 0; i < vertices.length; i++) {
+        let next = (i + 1) % vertices.length;
+        let edge = { x: vertices[next].x - vertices[i].x, y: vertices[next].y - vertices[i].y };
+        let normal = { x: -edge.y, y: edge.x };
+        let length = Math.sqrt(normal.x * normal.x + normal.y * normal.y);
+        normal.x /= length;
+        normal.y /= length;
+
+        let ballToEdge = { x: ball.x - vertices[i].x, y: ball.y - vertices[i].y };
+        let dot = ballToEdge.x * normal.x + ballToEdge.y * normal.y;
+
+        if (dot < ball.radius) {
+            reflectVelocity(normal);
+            let overlap = ball.radius - dot;
+            ball.x += normal.x * overlap;
+            ball.y += normal.y * overlap;
+        }
+    }
+}
+
+function update() {
+    ball.vy += gravity;
+    ball.vx *= friction;
+    ball.vy *= friction;
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+
+    checkCollision();
+    hexagon.angle += hexagon.angularSpeed;
+}
+
+function drawHexagon() {
+    let vertices = getHexagonVertices();
+    ctx.beginPath();
+    ctx.moveTo(vertices[0].x, vertices[0].y);
+    for (let i = 1; i < vertices.length; i++) {
+        ctx.lineTo(vertices[i].x, vertices[i].y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = "black";
+    ctx.stroke();
+}
+
+function drawBall() {
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+    ctx.fillStyle = "red";
+    ctx.fill();
+    ctx.closePath();
+}
+
+function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawHexagon();
+    drawBall();
+    update();
+    requestAnimationFrame(animate);
+}
+
+animate();
+
+  </script>
+</body>
+</html>

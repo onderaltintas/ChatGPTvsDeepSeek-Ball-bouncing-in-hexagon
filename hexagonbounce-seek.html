@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bouncing Ball in Spinning Hexagon</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #f0f0f0;
+    }
+    canvas {
+      border: 1px solid #000;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="800" height="600"></canvas>
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    // Canvas dimensions
+    const WIDTH = canvas.width;
+    const HEIGHT = canvas.height;
+
+    // Hexagon properties
+    const hexagonRadius = 250;
+    const hexagonCenter = { x: WIDTH / 2, y: HEIGHT / 2 };
+    let hexagonAngle = 0;
+    const hexagonAngularVelocity = 0.01;
+
+    // Ball properties
+    const ballRadius = 20;
+    let ballPosition = { x: hexagonCenter.x, y: hexagonCenter.y }; // Start at the center
+    let ballVelocity = { x: 2, y: 0 }; // Initial velocity
+    const gravity = 0.1;
+    const friction = 0.99;
+
+    // Function to calculate hexagon vertices
+    function calculateHexagonVertices(center, radius, angle) {
+      const vertices = [];
+      for (let i = 0; i < 6; i++) {
+        const x = center.x + radius * Math.cos((Math.PI / 3) * i + angle);
+        const y = center.y + radius * Math.sin((Math.PI / 3) * i + angle);
+        vertices.push({ x, y });
+      }
+      return vertices;
+    }
+
+    // Function to calculate the distance between a point and a line segment
+    function distanceToLineSegment(point, lineStart, lineEnd) {
+      const lineVec = { x: lineEnd.x - lineStart.x, y: lineEnd.y - lineStart.y };
+      const pointVec = { x: point.x - lineStart.x, y: point.y - lineStart.y };
+      const projection = (pointVec.x * lineVec.x + pointVec.y * lineVec.y) / (lineVec.x ** 2 + lineVec.y ** 2);
+      if (projection < 0) {
+        return Math.sqrt((point.x - lineStart.x) ** 2 + (point.y - lineStart.y) ** 2);
+      } else if (projection > 1) {
+        return Math.sqrt((point.x - lineEnd.x) ** 2 + (point.y - lineEnd.y) ** 2);
+      } else {
+        const closestPoint = {
+          x: lineStart.x + projection * lineVec.x,
+          y: lineStart.y + projection * lineVec.y,
+        };
+        return Math.sqrt((point.x - closestPoint.x) ** 2 + (point.y - closestPoint.y) ** 2);
+      }
+    }
+
+    // Function to reflect the ball off a wall
+    function reflectBall(position, velocity, wallStart, wallEnd) {
+      const wallVec = { x: wallEnd.x - wallStart.x, y: wallEnd.y - wallStart.y };
+      const normalVec = { x: -wallVec.y, y: wallVec.x }; // Perpendicular to the wall
+      const normalMagnitude = Math.sqrt(normalVec.x ** 2 + normalVec.y ** 2);
+      normalVec.x /= normalMagnitude;
+      normalVec.y /= normalMagnitude;
+
+      // Calculate the reflection vector
+      const dotProduct = velocity.x * normalVec.x + velocity.y * normalVec.y;
+      velocity.x -= 2 * dotProduct * normalVec.x;
+      velocity.y -= 2 * dotProduct * normalVec.y;
+
+      // Adjust the ball's position to prevent it from getting stuck inside the wall
+      const overlap = ballRadius - distanceToLineSegment(position, wallStart, wallEnd);
+      if (overlap > 0) {
+        position.x += normalVec.x * overlap;
+        position.y += normalVec.y * overlap;
+      }
+
+      return velocity;
+    }
+
+    // Function to check for collisions with hexagon walls
+    function checkCollisions(position, vertices) {
+      for (let i = 0; i < 6; i++) {
+        const wallStart = vertices[i];
+        const wallEnd = vertices[(i + 1) % 6];
+        const distance = distanceToLineSegment(position, wallStart, wallEnd);
+        if (distance < ballRadius) {
+          return { collided: true, wallStart, wallEnd };
+        }
+      }
+      return { collided: false };
+    }
+
+    // Main animation loop
+    function animate() {
+      // Clear the canvas
+      ctx.clearRect(0, 0, WIDTH, HEIGHT);
+
+      // Update hexagon angle
+      hexagonAngle += hexagonAngularVelocity;
+      if (hexagonAngle >= 2 * Math.PI) hexagonAngle -= 2 * Math.PI;
+
+      // Calculate hexagon vertices
+      const hexagonVertices = calculateHexagonVertices(hexagonCenter, hexagonRadius, hexagonAngle);
+
+      // Update ball position and velocity
+      ballVelocity.y += gravity;
+      ballPosition.x += ballVelocity.x;
+      ballPosition.y += ballVelocity.y;
+
+      // Check for collisions with hexagon walls
+      const collision = checkCollisions(ballPosition, hexagonVertices);
+      if (collision.collided) {
+        ballVelocity = reflectBall(ballPosition, ballVelocity, collision.wallStart, collision.wallEnd);
+      }
+
+      // Apply friction
+      ballVelocity.x *= friction;
+      ballVelocity.y *= friction;
+
+      // Draw hexagon
+      ctx.beginPath();
+      ctx.moveTo(hexagonVertices[0].x, hexagonVertices[0].y);
+      for (let i = 1; i < 6; i++) {
+        ctx.lineTo(hexagonVertices[i].x, hexagonVertices[i].y);
+      }
+      ctx.closePath();
+      ctx.strokeStyle = 'black';
+      ctx.stroke();
+
+      // Draw ball
+      ctx.beginPath();
+      ctx.arc(ballPosition.x, ballPosition.y, ballRadius, 0, 2 * Math.PI);
+      ctx.fillStyle = 'red';
+      ctx.fill();
+      ctx.stroke();
+
+      // Request the next frame
+      requestAnimationFrame(animate);
+    }
+
+    // Start the animation
+    animate();
+  </script>
+</body>
+</html>

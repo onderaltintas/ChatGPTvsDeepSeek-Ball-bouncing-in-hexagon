@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dönen Altıgen ve Zıplayan Top</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100%;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let hexagonRadius = 100;
+        const ballRadius = 10;
+        const gravity = 0.1;
+        const friction = 0.99;
+        let angle = 0;
+        const angleSpeed = 0.02;
+
+        let ball = {
+            x: 0,
+            y: 0,
+            vx: 0,
+            vy: 0
+        };
+
+        // Canvas ve içindeki öğeleri yeniden boyutlandır
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            // Topun başlangıç pozisyonunu güncelle
+            ball.x = canvas.width / 2;
+            ball.y = canvas.height / 2;
+        }
+
+        // Altıgenin köşe noktalarını hesapla
+        function getHexagonPoints(cx, cy, radius, angle) {
+            const points = [];
+            for (let i = 0; i < 6; i++) {
+                const x = cx + radius * Math.cos(angle + i * Math.PI / 3);
+                const y = cy + radius * Math.sin(angle + i * Math.PI / 3);
+                points.push({ x, y });
+            }
+            return points;
+        }
+
+        // İki nokta arasındaki mesafeyi hesapla
+        function distance(x1, y1, x2, y2) {
+            return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+        }
+
+        // Bir noktanın bir doğruya olan mesafesini hesapla
+        function pointToLineDistance(px, py, x1, y1, x2, y2) {
+            const numerator = Math.abs((y2 - y1) * px - (x2 - x1) * py + x2 * y1 - y2 * x1);
+            const denominator = distance(x1, y1, x2, y2);
+            return numerator / denominator;
+        }
+
+        // Topun altıgenin kenarlarına çarpıp çarpmadığını kontrol et
+        function checkCollision() {
+            const points = getHexagonPoints(canvas.width / 2, canvas.height / 2, hexagonRadius, angle);
+
+            for (let i = 0; i < 6; i++) {
+                const p1 = points[i];
+                const p2 = points[(i + 1) % 6];
+
+                // Kenara olan mesafe
+                const dist = pointToLineDistance(ball.x, ball.y, p1.x, p1.y, p2.x, p2.y);
+
+                if (dist < ballRadius) {
+                    // Çarpışma oldu, topu geri yansıt
+                    const normalAngle = Math.atan2(p2.y - p1.y, p2.x - p1.x) + Math.PI / 2;
+                    const overlap = ballRadius - dist;
+                    ball.x += overlap * Math.cos(normalAngle);
+                    ball.y += overlap * Math.sin(normalAngle);
+
+                    // Hızı yansıt
+                    const normalVelocity = ball.vx * Math.cos(normalAngle) + ball.vy * Math.sin(normalAngle);
+                    ball.vx -= 2 * normalVelocity * Math.cos(normalAngle);
+                    ball.vy -= 2 * normalVelocity * Math.sin(normalAngle);
+                }
+            }
+        }
+
+        function drawHexagon(x, y, radius, angle) {
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+                const xPos = x + radius * Math.cos(angle + i * Math.PI / 3);
+                const yPos = y + radius * Math.sin(angle + i * Math.PI / 3);
+                ctx.lineTo(xPos, yPos);
+            }
+            ctx.closePath();
+            ctx.strokeStyle = '#000';
+            ctx.stroke();
+        }
+
+        function drawBall(x, y, radius) {
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fillStyle = '#f00';
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        function updateBall() {
+            ball.vy += gravity;
+            ball.vx *= friction;
+            ball.vy *= friction;
+
+            ball.x += ball.vx;
+            ball.y += ball.vy;
+
+            // Topun altıgenin kenarlarına çarpıp çarpmadığını kontrol et
+            checkCollision();
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            drawHexagon(canvas.width / 2, canvas.height / 2, hexagonRadius, angle);
+            drawBall(ball.x, ball.y, ballRadius);
+
+            updateBall();
+
+            angle += angleSpeed;
+
+            requestAnimationFrame(animate);
+        }
+
+        // Pencere boyutu değiştiğinde canvas'ı yeniden boyutlandır
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+        });
+
+        // İlk başta canvas'ı boyutlandır ve animasyonu başlat
+        resizeCanvas();
+        animate();
+    </script>
+</body>
+</html>

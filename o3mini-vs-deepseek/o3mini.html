@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zıplayan Top ve Dönen Altıgen</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: black;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const hexRadius = 100;
+        const ballRadius = 10;
+        let ball = { x: canvas.width / 2, y: canvas.height / 2, vx: 2, vy: -2 };
+        let gravity = 0.1;
+        let friction = 0.99;
+        let angle = 0;
+        let angleSpeed = 0.02;
+        
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            ball.x = canvas.width / 2;
+            ball.y = canvas.height / 2;
+        }
+        
+        window.addEventListener("resize", resizeCanvas);
+        resizeCanvas();
+
+
+
+        function drawHexagon(x, y, radius, rotation) {
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+                let theta = (Math.PI / 3) * i + rotation;
+                let px = x + radius * Math.cos(theta);
+                let py = y + radius * Math.sin(theta);
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.strokeStyle = "white";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        function updateBall() {
+            ball.vy += gravity;
+            ball.vx *= friction;
+            ball.vy *= friction;
+            ball.x += ball.vx;
+            ball.y += ball.vy;
+
+            let cx = canvas.width / 2;
+            let cy = canvas.height / 2;
+            for (let i = 0; i < 6; i++) {
+                let theta1 = (Math.PI / 3) * i + angle;
+                let theta2 = (Math.PI / 3) * (i + 1) + angle;
+                let x1 = cx + hexRadius * Math.cos(theta1);
+                let y1 = cy + hexRadius * Math.sin(theta1);
+                let x2 = cx + hexRadius * Math.cos(theta2);
+                let y2 = cy + hexRadius * Math.sin(theta2);
+                
+                let dx = x2 - x1;
+                let dy = y2 - y1;
+                let len = Math.sqrt(dx * dx + dy * dy);
+                let nx = -dy / len;
+                let ny = dx / len;
+                
+                let bx = ball.x - x1;
+                let by = ball.y - y1;
+                let dot = bx * nx + by * ny;
+                
+                if (dot < ballRadius) {
+                    let dotVel = ball.vx * nx + ball.vy * ny;
+                    ball.vx -= 2 * dotVel * nx;
+                    ball.vy -= 2 * dotVel * ny;
+                    ball.x += nx * (ballRadius - dot);
+                    ball.y += ny * (ballRadius - dot);
+                }
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            angle += angleSpeed;
+            drawHexagon(canvas.width / 2, canvas.height / 2, hexRadius, angle);
+            updateBall();
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ballRadius, 0, Math.PI * 2);
+            ctx.fillStyle = "red";
+            ctx.fill();
+            requestAnimationFrame(animate);
+        }
+        
+        animate();
+    </script>
+</body>
+</html>
